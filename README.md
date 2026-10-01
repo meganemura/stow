@@ -200,6 +200,7 @@ Development and tests use Bun 1.4.2 or later. Run the tests with `bun test`.
 
 The package name is `@meganemura/stow`; its CLI command is `stow`.
 The npm package contains JavaScript. Users of npm and npx do not need Bun.
+See [the release guide](docs/releasing.md) for the npm trusted publisher settings and the tag workflow.
 
 ## Host discovery contract
 
