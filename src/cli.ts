@@ -17,21 +17,37 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { assertHostLinksAvailable, checkoutRoot, configuredAgents, removeHostLinks, requiredHostDirs, syncHostLinks } from "./hosts.ts";
+import { loadConfig } from "./config.ts";
+import { assertHostLinksAvailable, checkoutRoot, removeHostLinks, requiredHostDirs, syncHostLinks } from "./hosts.ts";
 
 const help = `stow — personal skills for the current Git checkout
 
 Usage: stow [command] [options]
 Run from the target checkout. With no command, stow runs sync.
-Skills live in ~/.stow/skills/<owner>/<repo>/<name>/SKILL.md.
+Skills live in <skillsDir>/<owner>/<repo>/<name>/SKILL.md.
+The default skillsDir is ~/.stow/skills.
 The origin remote supplies owner/repo. Use --repo to override it.
 
 First setup:
-  Create ~/.stow/config.json with the agents you use:
-    { "agents": ["codex", "claude-code", "cursor"] }
+  Clone your personal skills repository, then create ~/.stow/config.json:
+    {
+      "agents": ["codex", "claude-code", "cursor"],
+      "skillsDir": "~/src/private-skills/skills"
+    }
+  Within skillsDir, use <owner>/<repo>/<name>/SKILL.md.
+  skillsDir accepts absolute paths, ~/ paths, and paths relative to ~/.stow.
   Codex and Cursor use .agents/skills; Claude Code uses .claude/skills.
   Without this file, stow stores skills but creates no host links.
   To install this Bun CLI locally, run bun link in the stow checkout.
+  The package is @meganemura/stow; the command is stow. Bun is required.
+
+Alternative storage with directory links (omit skillsDir):
+  Shared repository: ln -s ~/src/private-skills/skills ~/.stow/skills
+  One repository per target, with skills/<name>/SKILL.md:
+    mkdir -p ~/.stow/skills/OWNER
+    ln -s ~/src/project-skills/skills ~/.stow/skills/OWNER/REPO
+  Create links only at paths that do not exist yet.
+  Move existing skills into the skills checkout before replacing a directory.
 
 Typical workflow:
   1. Create a skill in the target checkout with your agent or another tool.
@@ -79,6 +95,8 @@ Git and existing skills:
   add and adopt refuse existing overlay entries and conflicting host paths.
   sync and remove preserve unrelated host skills.
   After removal, run stow in other checkouts to clean up their broken links.
+  Commit and push skill changes from your personal skills repository yourself.
+  stow changes files locally; it does not commit or push that repository.
 `;
 
 function validSegment(value: string): boolean {
@@ -110,7 +128,7 @@ export function repositoryFromRemote(remote: string): string {
 
 export function overlayPath(repo: string, home = homedir()): string {
   const [owner, name] = repositoryName(repo).split("/");
-  return join(home, ".stow", "skills", owner, name);
+  return join(loadConfig(home).skillsDir, owner, name);
 }
 
 function currentRepository(override?: string): string {
@@ -219,7 +237,7 @@ function run(args: string[]): void {
   } else if (options.command === "sync") {
     const root = checkoutRoot();
     if (!root) throw new Error("sync requires a Git checkout.");
-    syncHostLinks(root, dir, skillNames(dir), configuredAgents(homedir()));
+    syncHostLinks(root, dir, skillNames(dir), loadConfig(homedir()).agents);
   } else if (options.command === "remove") {
     if (!options.source) throw new Error("remove requires a skill name.");
     const root = checkoutRoot();
@@ -242,7 +260,7 @@ function run(args: string[]): void {
       throw new Error(`Expected a skill directory with SKILL.md: ${source}`);
     }
     const name = skillName(source);
-    const agents = configuredAgents(homedir());
+    const agents = loadConfig(homedir()).agents;
     const root = checkoutRoot();
     if (agents.length && !root) throw new Error("add requires a Git checkout when agents are configured.");
     const adopting = options.command === "adopt";

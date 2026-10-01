@@ -1,5 +1,5 @@
 // Reconcile host discovery links for one checkout.
-// The canonical skill files stay in the home overlay; this module owns only links and Git exclusions.
+// Canonical skill files stay in the configured overlay; this module owns only links and Git exclusions.
 
 import { execFileSync } from "node:child_process";
 import {
@@ -14,26 +14,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import type { Agent } from "./config.ts";
 
-type Agent = "claude-code" | "codex" | "cursor";
-const agentNames: Agent[] = ["claude-code", "codex", "cursor"];
 const hostDirs = [".agents/skills", ".claude/skills"] as const;
-
-export function configuredAgents(home: string): Agent[] {
-  const configPath = join(home, ".stow", "config.json");
-  if (!existsSync(configPath)) return [];
-  let config: unknown;
-  try {
-    config = JSON.parse(readFileSync(configPath, "utf8"));
-  } catch {
-    throw new Error(`Cannot parse ${configPath}.`);
-  }
-  const agents = (config as { agents?: unknown } | null)?.agents;
-  if (!Array.isArray(agents) || agents.some((agent) => !agentNames.includes(agent))) {
-    throw new Error(`${configPath} must contain an agents array of claude-code, codex, or cursor.`);
-  }
-  return [...new Set(agents)] as Agent[];
-}
 
 export function checkoutRoot(): string | undefined {
   try {

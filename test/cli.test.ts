@@ -11,6 +11,7 @@ import {
   readFileSync,
   readlinkSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -187,6 +188,51 @@ test("adopt hides a generated host skill and refuses tracked skills", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+for (const storageMode of ["absolute", "home", "relative", "symlink"] as const) {
+  test(`skills repository checkout works with storage mode: ${storageMode}`, () => {
+    const root = mkdtempSync(join(tmpdir(), "stow-test-"));
+    try {
+      const checkout = join(root, "checkout");
+      const home = join(root, "home");
+      const storage = join(home, "private-skills");
+      const configDir = join(home, ".stow");
+      mkdirSync(configDir, { recursive: true });
+      execFileSync("git", ["init", "-q", checkout]);
+      execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
+      execFileSync("git", ["init", "-q", storage]);
+      const skillsRoot = join(storage, "skills");
+      writeSkill(join(skillsRoot, "alice", "project", "existing"));
+      const skillsDir = storageMode === "absolute" ? skillsRoot
+        : storageMode === "home" ? "~/private-skills/skills"
+        : storageMode === "relative" ? "../private-skills/skills" : undefined;
+      writeFileSync(join(configDir, "config.json"), JSON.stringify({ agents: ["codex"], skillsDir }));
+      if (storageMode === "symlink") symlinkSync(skillsRoot, join(configDir, "skills"), "dir");
+      const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+        cwd: checkout,
+        env: { ...process.env, HOME: home },
+        encoding: "utf8",
+      });
+      const overlay = storageMode === "symlink" ? join(configDir, "skills", "alice", "project")
+        : join(skillsRoot, "alice", "project");
+      expect(run("path").stdout.trim()).toBe(overlay);
+      expect(run().status).toBe(0);
+      expect(readlinkSync(join(checkout, ".agents", "skills", "existing"))).toBe(join(overlay, "existing"));
+      expect(run("list").stdout).toBe("existing\n");
+
+      writeSkill(join(checkout, ".agents", "skills", "generated"));
+      expect(run("adopt", ".agents/skills/generated").status).toBe(0);
+      expect(readFileSync(join(skillsRoot, "alice", "project", "generated", "SKILL.md"), "utf8")).toContain("name: generated");
+      expect(execFileSync("git", ["-C", checkout, "status", "--porcelain"], { encoding: "utf8" })).toBe("");
+      expect(execFileSync("git", ["-C", storage, "status", "--porcelain"], { encoding: "utf8" })).toContain("skills/");
+      expect(run("remove", "generated").status).toBe(0);
+      expect(existsSync(join(skillsRoot, "alice", "project", "generated"))).toBe(false);
+      expect(existsSync(join(skillsRoot, "alice", "project", "existing", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test("--repo selects an overlay without origin", () => {
   const root = mkdtempSync(join(tmpdir(), "stow-test-"));
