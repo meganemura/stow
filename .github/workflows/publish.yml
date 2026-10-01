@@ -1,5 +1,6 @@
 # Publishes a version tag through npm OIDC after both CLI runtimes pass the tests.
-# The publish environment accepts v* tags. This job has no repository write access.
+# The publish environment requires approval and accepts v* tags.
+# This job has no repository write access.
 name: Publish
 
 on:
@@ -61,8 +62,5 @@ jobs:
             git status --porcelain --untracked-files=no
             exit 1
           fi
-      # npm creates provenance only for public repositories. This repository is private.
       - name: Publish through the trusted publisher
-        env:
-          NPM_CONFIG_PROVENANCE: "false"
-        run: npm publish
+        run: npm publish --provenance

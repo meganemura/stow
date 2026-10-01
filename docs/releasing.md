@@ -27,9 +27,9 @@ npm trust list @meganemura/stow
 
 npm can require an additional account authentication step for these commands.
 The GitHub `publish` environment accepts only `v*` tags.
-The repository is private, so the workflow disables provenance.
-GitHub limits required reviewers in private repositories by account plan.
-The current environment uses a tag restriction, without a reviewer gate.
+The environment requires approval from `meganemura` before the publish job starts.
+Administrators cannot bypass this approval. The maintainer can approve their own workflow run.
+The repository is public, so npm publishes provenance with the package.
 
 See the [npm trusted publisher documentation](https://docs.npmjs.com/trusted-publishers/).
 
