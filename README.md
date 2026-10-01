@@ -52,18 +52,19 @@ The output includes the workflow and skill format, so the agent does not need th
 ## Configure storage yourself
 
 Create your own GitHub repository for your skills, then clone it locally.
-Use this layout to keep skills specific to each target repository:
+This example stores skills for the GitHub repositories `alice/weather-app` and `bob/recipe-api`.
+The first directory is the GitHub owner. The next directory is the repository name.
 
 ```text
 private-skills/
   skills/
     alice/
-      project/
+      weather-app/
         my-skill/
           SKILL.md
           references/
     bob/
-      another-project/
+      recipe-api/
         another-skill/
           SKILL.md
 ```
@@ -103,7 +104,7 @@ Keeping the same symlink path lets existing host links reach the moved skills.
 For one skills repository per target, link the target's overlay directory:
 
 ```text
-project-skills/
+weather-app-skills/
   skills/
     my-skill/
       SKILL.md
@@ -111,11 +112,11 @@ project-skills/
 
 ```sh
 mkdir -p ~/.stow/skills/alice
-ln -s ~/src/project-skills/skills ~/.stow/skills/alice/project
+ln -s ~/src/weather-app-skills/skills ~/.stow/skills/alice/weather-app
 ```
 
 In this layout, omit `skillsDir` and keep each dedicated checkout outside the target checkout.
-The `alice/project` directory link selects that target's skills repository.
+The `alice/weather-app` directory link selects the skills repository for that GitHub repository.
 
 ## Configure host discovery
 
