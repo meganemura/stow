@@ -15,6 +15,13 @@ The overlay belongs to the user and stays in the separate skills checkout.
 
 ## Set up a personal skills repository
 
+Install Bun 1.4.2 or later, then install the CLI:
+
+```sh
+bun add --global @meganemura/stow
+stow --help
+```
+
 Create your own GitHub repository for your skills, then clone it locally.
 Use this layout to keep skills specific to each target repository:
 
@@ -150,7 +157,8 @@ Other checkouts of the same repository can retain broken links; run `stow sync` 
 Run the tests with `bun test`.
 
 The package name is `@meganemura/stow`; its CLI command is `stow`.
-The package currently has `private: true` and uses Bun at runtime.
+The npm package contains TypeScript source and uses Bun at runtime.
+If you install it with npm, install Bun separately before you run `stow`.
 
 ## Host discovery contract
 

@@ -1,7 +1,6 @@
 {
   "name": "@meganemura/stow",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
     "stow": "./src/cli.ts"
@@ -9,5 +8,19 @@
   "scripts": {
     "start": "bun src/cli.ts",
     "test": "bun test"
+  },
+  "description": "Personal skills for Git checkouts with local host links",
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meganemura/stow.git"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
