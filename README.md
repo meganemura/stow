@@ -6,7 +6,7 @@ Each target repository gets its own `<owner>/<repo>/` directory there.
 `stow` reads this identity from the target's GitHub-style `origin` URL.
 Use `--repo OWNER/REPO` when the remote is missing or has a different identity.
 
-This Bun TypeScript CLI connects personal skills to coding agents through their project skill discovery paths.
+This TypeScript CLI connects personal skills to coding agents through their project skill discovery paths.
 Each skill must have a `<name>/SKILL.md` file. The file must declare a matching `name` and a `description` in YAML frontmatter.
 A skill may also contain `references/`.
 
@@ -15,12 +15,38 @@ The overlay belongs to the user and stays in the separate skills checkout.
 
 ## Set up a personal skills repository
 
-Install Bun 1.4.2 or later, then install the CLI:
+Install Node.js 20 or later, then install the CLI:
 
 ```sh
-bun add --global @meganemura/stow
+npm install --global @meganemura/stow
 stow --help
 ```
+
+## Set up through a coding agent
+
+In a host with shell shortcuts, run:
+
+```text
+!stow agent-instructions
+```
+
+You can also run it without a global install:
+
+```text
+!npx @meganemura/stow agent-instructions
+```
+
+If you have Bun, use `bunx --bun @meganemura/stow agent-instructions` to run the same package with Bun.
+The default `stow` and `npx` commands use Node. Bun performance gains depend on the workload.
+
+Otherwise, run `stow agent-instructions` in the agent's terminal and give the output to the agent.
+The command prints a guide and the current config state. It changes no files.
+The agent follows the guide to configure its host, explain storage, and suggest a useful personal skill.
+It asks whether you want to create a skill, adopt an existing skill, or skip adding skills.
+You can select your skills repository before the agent adds files.
+The output includes the workflow and skill format, so the agent does not need this README.
+
+## Configure storage yourself
 
 Create your own GitHub repository for your skills, then clone it locally.
 Use this layout to keep skills specific to each target repository:
@@ -116,7 +142,7 @@ An open host session may need to refresh its skill list after a new link appears
 
 `stow --help` includes the setup, workflow, commands, and skill format.
 
-Run `bun link` in this repository to make `stow` available as a local command.
+For development, run `bun run build` and `bun link` in this repository to make `stow` available as a local command.
 Then run it from the target Git checkout with an `origin` remote.
 
 To keep a generated skill private, adopt it from a configured host discovery path:
@@ -168,11 +194,12 @@ Other checkouts of the same repository can retain broken links; run `stow sync` 
 `init` creates the user config and prints its path.
 `list` prints the skill names. `--repo OWNER/REPO` works with commands that select a target repository.
 
-Run the tests with `bun test`.
+Development and tests use Bun 1.4.2 or later. Run the tests with `bun test`.
+`bun run build` creates the Node-compatible JavaScript that the npm package includes.
+`npm pack` and `npm publish` run this build through the `prepack` script, so release preparation requires Bun.
 
 The package name is `@meganemura/stow`; its CLI command is `stow`.
-The npm package contains TypeScript source and uses Bun at runtime.
-If you install it with npm, install Bun separately before you run `stow`.
+The npm package contains JavaScript. Users of npm and npx do not need Bun.
 
 ## Host discovery contract
 

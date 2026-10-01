@@ -1,20 +1,22 @@
 {
   "name": "@meganemura/stow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "bin": {
-    "stow": "./src/cli.ts"
+    "stow": "./dist/cli.js"
   },
   "scripts": {
     "start": "bun src/cli.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "build": "bun build ./src/cli.ts --target=node --outfile=./dist/cli.js",
+    "prepack": "bun run build"
   },
   "description": "Personal skills for Git checkouts with local host links",
   "files": [
-    "src/"
+    "dist/"
   ],
   "engines": {
-    "bun": ">=1.4.2"
+    "node": ">=20"
   },
   "repository": {
     "type": "git",

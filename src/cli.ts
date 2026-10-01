@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // Resolve a checkout's private skill overlay and manage its skill directories.
 // Host-specific discovery paths are delegated to the link reconciler.
 
@@ -18,6 +18,7 @@ import {
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { agentNames, agentPaths, initConfig, loadConfig } from "./config.ts";
+import { agentInstructions } from "./agent-instructions.ts";
 import { adoptionHostDirs, assertHostLinksAvailable, checkoutRoot, removeHostLinks, syncHostLinks } from "./hosts.ts";
 
 const help = `stow — personal skills for the current Git checkout
@@ -42,8 +43,12 @@ First setup:
   skillsDir accepts absolute paths, ~/ paths, and paths relative to ~/.stow.
   Claude Code uses .claude/skills; all other supported agents use .agents/skills.
   Without this file, stow stores skills but creates no host links.
-  To install this Bun CLI locally, run bun link in the stow checkout.
-  The package is @meganemura/stow; the command is stow. Bun is required.
+  Install: npm install --global @meganemura/stow
+  Or run without a global install: npx @meganemura/stow agent-instructions
+  Node.js 20+ is required for npm/npx use.
+  With Bun: bunx --bun @meganemura/stow agent-instructions
+  Development uses Bun. To link this checkout: bun run build, then bun link.
+  The package is @meganemura/stow; the command is stow.
 
 Alternative storage with directory links (omit skillsDir):
   Shared repository: ln -s ~/src/private-skills/skills ~/.stow/skills
@@ -63,6 +68,10 @@ Typical workflow:
      A running host may need to refresh its skill list.
 
 Commands:
+  agent-instructions Print a guide for the coding agent that receives the output.
+                     In an agent with shell shortcuts: !stow agent-instructions
+                     It guides setup, storage selection, and a skill proposal.
+                     This command changes no files. The agent follows the guide.
   adopt <skill-dir> Move an untracked host skill to the private overlay.
                     Move it to the selected discovery path as a link.
                     The source must be in a configured host discovery path.
@@ -210,14 +219,15 @@ function parseArgs(args: string[]): Options {
     if (arg === "--help" || arg === "-h") options.help = true;
     else if (arg === "--mkdir") options.mkdir = true;
     else if (arg === "--link") options.link = true;
-    else if (arg === "--repo") options.repo = args[++index];
-    else if (arg === "--skills-dir" || arg === "--agents") {
-      const value = args[++index];
-      if (!value || value.startsWith("-")) throw new Error(`${arg} requires a value.`);
-      if (arg === "--skills-dir") options.skillsDir = value;
+    else if (["--repo", "--skills-dir", "--agents"].some((flag) => arg === flag || arg.startsWith(`${flag}=`))) {
+      const equals = arg.indexOf("=");
+      const flag = equals < 0 ? arg : arg.slice(0, equals);
+      const value = equals < 0 ? args[++index] : arg.slice(equals + 1);
+      if (!value || value.startsWith("-")) throw new Error(`${flag} requires a value.`);
+      if (flag === "--repo") options.repo = value;
+      else if (flag === "--skills-dir") options.skillsDir = value;
       else options.agents = value.split(",").map((agent) => agent.trim());
     }
-    else if (arg.startsWith("--repo=")) options.repo = arg.slice(7);
     else if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
     else if (!options.command) options.command = arg;
     else if (!options.source) options.source = arg;
@@ -236,7 +246,7 @@ function run(args: string[]): void {
     return;
   }
   options.command ??= "sync";
-  if (!["path", "list", "add", "adopt", "remove", "sync", "open", "init"].includes(options.command)) {
+  if (!["path", "list", "add", "adopt", "remove", "sync", "open", "init", "agent-instructions"].includes(options.command)) {
     throw new Error(`Unknown command: ${options.command}`);
   }
   if (options.link && options.command !== "add") {
@@ -256,6 +266,11 @@ function run(args: string[]): void {
   }
   if (options.skillsDir !== undefined || options.agents !== undefined) {
     throw new Error("--skills-dir and --agents are only valid with init.");
+  }
+
+  if (options.command === "agent-instructions") {
+    process.stdout.write(agentInstructions(homedir(), options.repo ? repositoryName(options.repo) : undefined));
+    return;
   }
 
   const dir = overlayPath(currentRepository(options.repo));

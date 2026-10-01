@@ -17,7 +17,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
-const cli = resolve(import.meta.dir, "../src/cli.ts");
+const cli = process.env.STOW_TEST_CLI ?? resolve(import.meta.dir, "../src/cli.ts");
+const cliRuntime = process.env.STOW_TEST_RUNTIME ?? process.execPath;
 // Each case starts several Git and Bun processes, which can exceed five seconds on a busy machine.
 setDefaultTimeout(30_000);
 
@@ -37,7 +38,7 @@ test("path, add, list, and link use the origin overlay", () => {
     execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
 
     const run = (...args: string[]) =>
-      spawnSync(process.execPath, [cli, ...args], {
+      spawnSync(cliRuntime, [cli, ...args], {
         cwd: checkout,
         env: { ...process.env, HOME: home },
         encoding: "utf8",
@@ -85,7 +86,7 @@ test("configured agents get ignored links, and remove cleans both paths after co
     execFileSync("git", ["init", "-q", checkout]);
     execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
     const run = (...args: string[]) =>
-      spawnSync(process.execPath, [cli, ...args], {
+      spawnSync(cliRuntime, [cli, ...args], {
         cwd: checkout,
         env: { ...process.env, HOME: home },
         encoding: "utf8",
@@ -125,7 +126,7 @@ test("sync changes host paths and add refuses collisions", () => {
     execFileSync("git", ["init", "-q", checkout]);
     execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
     const run = (...args: string[]) =>
-      spawnSync(process.execPath, [cli, ...args], {
+      spawnSync(cliRuntime, [cli, ...args], {
         cwd: checkout,
         env: { ...process.env, HOME: home },
         encoding: "utf8",
@@ -165,7 +166,7 @@ test("adopt hides a generated host skill and refuses tracked skills", () => {
     const source = join(checkout, ".agents", "skills", "generated");
     writeSkill(source);
     const content = readFileSync(join(source, "SKILL.md"), "utf8");
-    const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+    const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
       cwd: checkout,
       env: { ...process.env, HOME: home },
       encoding: "utf8",
@@ -210,7 +211,7 @@ for (const storageMode of ["absolute", "home", "relative", "symlink"] as const) 
         : storageMode === "relative" ? "../private-skills/skills" : undefined;
       writeFileSync(join(configDir, "config.json"), JSON.stringify({ agents: ["codex"], skillsDir }));
       if (storageMode === "symlink") symlinkSync(skillsRoot, join(configDir, "skills"), "dir");
-      const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+      const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
         cwd: checkout,
         env: { ...process.env, HOME: home },
         encoding: "utf8",
@@ -251,7 +252,7 @@ for (const [agent, nativePath] of [
       const home = join(root, "home");
       execFileSync("git", ["init", "-q", checkout]);
       execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
-      const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+      const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
         cwd: checkout, env: { ...process.env, HOME: home }, encoding: "utf8",
       });
       expect(run("init", "--agents", agent).status).toBe(0);
@@ -281,7 +282,7 @@ test("init creates editable configuration before any skill storage, without a Gi
   const root = mkdtempSync(join(tmpdir(), "stow-test-"));
   try {
     const home = join(root, "home");
-    const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+    const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
       cwd: root,
       env: { ...process.env, HOME: home },
       encoding: "utf8",
@@ -308,7 +309,7 @@ test("init accepts a storage path and agent list, and rejects invalid settings b
   const root = mkdtempSync(join(tmpdir(), "stow-test-"));
   try {
     const home = join(root, "home");
-    const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+    const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
       cwd: root,
       env: { ...process.env, HOME: home },
       encoding: "utf8",
@@ -328,10 +329,41 @@ test("init accepts a storage path and agent list, and rejects invalid settings b
   }
 });
 
+test("agent-instructions guides setup without creating files and reports current configuration", () => {
+  const root = mkdtempSync(join(tmpdir(), "stow-test-"));
+  try {
+    const home = join(root, "home");
+    const run = (...args: string[]) => spawnSync(cliRuntime, [cli, ...args], {
+      cwd: root, env: { ...process.env, HOME: home }, encoding: "utf8",
+    });
+    const initial = run("agent-instructions");
+    expect(initial.status).toBe(0);
+    expect(initial.stdout).toContain('"configExists": false');
+    expect(initial.stdout).toContain("stow init --agents=codex");
+    expect(initial.stdout).toContain("Wait for the answer before you create, copy, or move a skill.");
+    expect(existsSync(join(home, ".stow"))).toBe(false);
+
+    expect(run("init", "--agents=codex,pi", "--skills-dir=~/private-skills/skills").status).toBe(0);
+    const configured = run("agent-instructions", "--repo=alice/project");
+    expect(configured.status).toBe(0);
+    expect(configured.stdout).toContain('"configExists": true');
+    expect(configured.stdout).toContain('"repositoryOverride": "alice/project"');
+    expect(configured.stdout).toContain(JSON.stringify(join(home, "private-skills", "skills")));
+    expect(existsSync(join(home, "private-skills"))).toBe(false);
+    writeFileSync(join(home, ".stow", "config.json"), "invalid json");
+    const broken = run("agent-instructions");
+    expect(broken.status).toBe(0);
+    expect(broken.stdout).toContain('"configError":');
+    expect(readFileSync(join(home, ".stow", "config.json"), "utf8")).toBe("invalid json");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("--repo selects an overlay without origin", () => {
   const root = mkdtempSync(join(tmpdir(), "stow-test-"));
   try {
-    const result = spawnSync(process.execPath, [cli, "path", "--repo", "other/project"], {
+    const result = spawnSync(cliRuntime, [cli, "path", "--repo", "other/project"], {
       cwd: root,
       env: { ...process.env, HOME: root },
       encoding: "utf8",
@@ -339,7 +371,7 @@ test("--repo selects an overlay without origin", () => {
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe(join(root, ".stow", "skills", "other", "project"));
 
-    const invalid = spawnSync(process.execPath, [cli, "path", "--repo", "../escape"], {
+    const invalid = spawnSync(cliRuntime, [cli, "path", "--repo", "../escape"], {
       cwd: root,
       env: { ...process.env, HOME: root },
       encoding: "utf8",

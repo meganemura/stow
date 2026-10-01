@@ -22,7 +22,26 @@ Directory symlinks support the same layout without a storage setting.
 Link `~/.stow/skills` to a shared skills checkout, or link one `<owner>/<repo>` directory to a dedicated checkout.
 Host links still refer to the selected overlay directory.
 
-## Host links
+## Setup through an agent
+
+`agent-instructions` prints a workflow for the coding agent that receives its output.
+It includes local config state and works before initialization or outside a Git checkout.
+It reports an invalid config with repair instructions instead of stopping the guide.
+The command itself reads files. The agent performs initialization and asks about skill creation.
+The agent identifies its host from the session and preserves existing agents and storage settings.
+It explains storage before it creates or moves a skill and waits for the user's choice.
+This keeps setup available through one command without a separately installed stow skill.
+
+## Runtime and distribution
+
+Development and tests use Bun. Bun builds one JavaScript file for Node before package creation.
+The npm binary points to that file and uses a Node shebang.
+This lets Node.js 20+ users run stow with npm or npx without installing Bun.
+Users can run the same package with Bun through `bunx --bun`.
+The implementation uses Node standard modules so both runtimes share the same CLI behavior.
+Runtime performance is not guaranteed; Git subprocesses and filesystem work also affect command time.
+
+## Host discovery paths
 
 The `agents` array in `~/.stow/config.json` selects host discovery paths.
 All supported hosts except Claude Code use `.agents/skills`; Claude Code uses `.claude/skills`.
