@@ -32,7 +32,13 @@ private-skills/
           SKILL.md
 ```
 
-Create `~/.stow/config.json` with your agents and the checkout's skills directory:
+Create the configuration before you create any skill storage directories:
+
+```sh
+stow init --skills-dir ~/src/private-skills/skills --agents codex,claude-code,cursor
+```
+
+You can run `init` from any directory. It creates `~/.stow/config.json` with these settings:
 
 ```json
 {
@@ -42,6 +48,9 @@ Create `~/.stow/config.json` with your agents and the checkout's skills director
 ```
 
 `skillsDir` accepts absolute paths and `~/` paths.
+`stow init` with no options creates a config you can edit before you use stow.
+It creates no skill storage directories and preserves an existing config.
+To change an existing setting, edit `~/.stow/config.json`.
 Relative paths start at `~/.stow/`, not at the current checkout.
 If you omit `skillsDir`, it defaults to `~/.stow/skills`.
 You can symlink that default directory to your skills checkout instead:
@@ -134,8 +143,9 @@ It preserves the source directory of an overlay symlink.
 Other checkouts of the same repository can retain broken links; run `stow sync` there to remove them.
 
 `path` prints the overlay path. `path --mkdir` creates it first.
-`open` and `init` create the overlay and print its path.
-`list` prints the skill names. `--repo OWNER/REPO` works with each command.
+`open` creates the overlay and prints its path.
+`init` creates the user config and prints its path.
+`list` prints the skill names. `--repo OWNER/REPO` works with commands that select a target repository.
 
 Run the tests with `bun test`.
 

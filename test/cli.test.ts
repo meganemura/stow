@@ -61,7 +61,7 @@ test("path, add, list, and link use the origin overlay", () => {
     expect(lstatSync(join(overlay, "linked")).isSymbolicLink()).toBe(true);
     expect(run("list").stdout).toBe("copied\nlinked\n");
     expect(run("open").stdout.trim()).toBe(overlay);
-    expect(run("init").stdout.trim()).toBe(overlay);
+    expect(run("init").stdout.trim()).toBe(join(home, ".stow", "config.json"));
 
     execFileSync("git", ["-C", checkout, "remote", "set-url", "origin", "https://github.com/bob/second.git"]);
     expect(run("path").stdout.trim()).toBe(join(home, ".stow", "skills", "bob", "second"));
@@ -233,6 +233,57 @@ for (const storageMode of ["absolute", "home", "relative", "symlink"] as const) 
     }
   });
 }
+
+test("init creates editable configuration before any skill storage, without a Git checkout", () => {
+  const root = mkdtempSync(join(tmpdir(), "stow-test-"));
+  try {
+    const home = join(root, "home");
+    const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+      cwd: root,
+      env: { ...process.env, HOME: home },
+      encoding: "utf8",
+    });
+    const configPath = join(home, ".stow", "config.json");
+    expect(run("init").stdout.trim()).toBe(configPath);
+    expect(existsSync(join(home, ".stow", "skills"))).toBe(false);
+    const chosen = join(root, "skills-checkout", "skills");
+    const content = JSON.stringify({ agents: ["codex"], skillsDir: chosen });
+    writeFileSync(configPath, content);
+    expect(run("init").status).toBe(0);
+    expect(readFileSync(configPath, "utf8")).toBe(content);
+    expect(run("init", "--skills-dir", "~/other").status).toBe(1);
+    expect(readFileSync(configPath, "utf8")).toBe(content);
+    expect(run("path", "--mkdir", "--repo", "alice/project").status).toBe(0);
+    expect(existsSync(join(chosen, "alice", "project"))).toBe(true);
+    expect(existsSync(join(home, ".stow", "skills"))).toBe(false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("init accepts a storage path and agent list, and rejects invalid settings before writing", () => {
+  const root = mkdtempSync(join(tmpdir(), "stow-test-"));
+  try {
+    const home = join(root, "home");
+    const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+      cwd: root,
+      env: { ...process.env, HOME: home },
+      encoding: "utf8",
+    });
+    expect(run("init", "--agents", "unknown").status).toBe(1);
+    expect(run("init", "--skills-dir").status).toBe(1);
+    expect(existsSync(join(home, ".stow"))).toBe(false);
+    expect(run("init", "--skills-dir", "~/private-skills/skills", "--agents", "codex,claude-code,codex").status).toBe(0);
+    expect(JSON.parse(readFileSync(join(home, ".stow", "config.json"), "utf8"))).toEqual({
+      agents: ["codex", "claude-code"], skillsDir: "~/private-skills/skills",
+    });
+    expect(run("path", "--repo", "alice/project").stdout.trim()).toBe(join(home, "private-skills", "skills", "alice", "project"));
+    expect(existsSync(join(home, "private-skills"))).toBe(false);
+    expect(run("list", "--skills-dir", "~/other", "--repo", "alice/project").status).toBe(1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("--repo selects an overlay without origin", () => {
   const root = mkdtempSync(join(tmpdir(), "stow-test-"));

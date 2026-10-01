@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { loadConfig } from "./config.ts";
+import { initConfig, loadConfig } from "./config.ts";
 import { assertHostLinksAvailable, checkoutRoot, removeHostLinks, requiredHostDirs, syncHostLinks } from "./hosts.ts";
 
 const help = `stow — personal skills for the current Git checkout
@@ -29,11 +29,15 @@ The default skillsDir is ~/.stow/skills.
 The origin remote supplies owner/repo. Use --repo to override it.
 
 First setup:
-  Clone your personal skills repository, then create ~/.stow/config.json:
+  Clone your personal skills repository, then run from any directory:
+    stow init --skills-dir ~/src/private-skills/skills --agents codex,claude-code,cursor
+  This creates ~/.stow/config.json before any skill storage directories:
     {
       "agents": ["codex", "claude-code", "cursor"],
       "skillsDir": "~/src/private-skills/skills"
     }
+  With no options, init creates a config to edit before you use stow.
+  init preserves an existing config. It does not create skill directories.
   Within skillsDir, use <owner>/<repo>/<name>/SKILL.md.
   skillsDir accepts absolute paths, ~/ paths, and paths relative to ~/.stow.
   Codex and Cursor use .agents/skills; Claude Code uses .claude/skills.
@@ -71,12 +75,17 @@ Commands:
                     Preserve the original source of an overlay symlink.
   list              Print skill names in this checkout's overlay.
   path              Print the overlay directory; use --mkdir to create it.
-  open, init        Create the overlay directory and print its path.
+  open              Create the overlay directory and print its path.
+  init              Create ~/.stow/config.json and print its path.
+                    Works outside a Git checkout. Existing config is preserved.
 
 Options:
   --repo OWNER/REPO  Select an overlay instead of reading origin.
   --mkdir           Create the overlay with path only.
   --link            Link the source with add only.
+  --skills-dir PATH Set the skill storage directory with init only.
+  --agents LIST     Set agents with init only, separated by commas.
+                    Values: codex, claude-code, cursor. Default: no agents.
   -h, --help        Show this help, also after a command.
 
 Skill format:
@@ -180,6 +189,8 @@ type Options = {
   command?: string;
   source?: string;
   repo?: string;
+  skillsDir?: string;
+  agents?: string[];
   mkdir: boolean;
   link: boolean;
   help: boolean;
@@ -193,6 +204,12 @@ function parseArgs(args: string[]): Options {
     else if (arg === "--mkdir") options.mkdir = true;
     else if (arg === "--link") options.link = true;
     else if (arg === "--repo") options.repo = args[++index];
+    else if (arg === "--skills-dir" || arg === "--agents") {
+      const value = args[++index];
+      if (!value || value.startsWith("-")) throw new Error(`${arg} requires a value.`);
+      if (arg === "--skills-dir") options.skillsDir = value;
+      else options.agents = value.split(",").map((agent) => agent.trim());
+    }
     else if (arg.startsWith("--repo=")) options.repo = arg.slice(7);
     else if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
     else if (!options.command) options.command = arg;
@@ -225,11 +242,20 @@ function run(args: string[]): void {
     throw new Error(`Unexpected argument: ${options.source}`);
   }
 
+  if (options.command === "init") {
+    if (options.repo) throw new Error("--repo is not valid with init; init creates user configuration.");
+    process.stdout.write(`${initConfig(homedir(), options.skillsDir, options.agents)}\n`);
+    return;
+  }
+  if (options.skillsDir !== undefined || options.agents !== undefined) {
+    throw new Error("--skills-dir and --agents are only valid with init.");
+  }
+
   const dir = overlayPath(currentRepository(options.repo));
   if (options.command === "path") {
     if (options.mkdir) mkdirSync(dir, { recursive: true });
     process.stdout.write(`${dir}\n`);
-  } else if (options.command === "open" || options.command === "init") {
+  } else if (options.command === "open") {
     mkdirSync(dir, { recursive: true });
     process.stdout.write(`${dir}\n`);
   } else if (options.command === "list") {

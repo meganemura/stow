@@ -6,6 +6,12 @@ An existing skill name is an error because replacement could discard local edits
 
 ## Storage in a skills repository
 
+`init` creates the user configuration before any repository-specific storage directory.
+It accepts `--skills-dir` and `--agents` and works outside a Git checkout.
+With no options, it creates an editable config with the default storage path and an empty agent list.
+An existing configuration stays intact. The user edits that file to change settings.
+`open` and `path --mkdir` create the selected repository's storage directory after configuration.
+
 The user can keep `skills/<owner>/<repo>/<name>/SKILL.md` in a separate GitHub repository.
 `skillsDir` points to that checkout's `skills` directory.
 It accepts absolute paths, home paths, and paths relative to `~/.stow`.
