@@ -2,29 +2,84 @@
 
 `stow` stores personal skills for a Git checkout outside that checkout. Each repository gets an overlay at `~/.stow/skills/<owner>/<repo>/`. `stow` reads `<owner>/<repo>` from a GitHub-style `origin` URL. Use `--repo OWNER/REPO` when the remote is missing or has a different identity.
 
-This is a Bun TypeScript CLI. It manages skill directories. A host such as Claude Code, Codex, or Cursor must add the overlay to its normal skill discovery path. The host can then show those skills in slash completion. The CLI does not configure a host. A host should treat the output of `stow path` as project-local skills for the current checkout. Each skill must be a `<name>/SKILL.md` directory. A skill may also contain `references/`.
+This Bun TypeScript CLI connects personal skills to Claude Code, Codex, and Cursor through their project skill discovery paths.
+Each skill must have a `<name>/SKILL.md` file. The file must declare a matching `name` and a `description` in YAML frontmatter.
+A skill may also contain `references/`.
 
-Do not commit overlay contents into the other checkout. The overlay belongs to the user and stays under `~/.stow/`.
+Do not commit overlay contents or host links into the other checkout.
+The overlay belongs to the user and stays under `~/.stow/`.
+
+## Configure agents
+
+Create `~/.stow/config.json` with the agents you use:
+
+```json
+{
+  "agents": ["codex", "claude-code", "cursor"]
+}
+```
+
+| Agent | Discovery path in the checkout | Invocation |
+| --- | --- | --- |
+| Codex | `.agents/skills/<name>` | `$name` or `/skills` |
+| Claude Code | `.claude/skills/<name>` | `/name` |
+| Cursor | `.agents/skills/<name>` | `/name` |
+
+Codex and Cursor share one discovery path.
+Without the config file, `stow` stores skills but creates no host links.
+The host must scan a linked skill before it appears in its command menu.
+An open host session may need to refresh its skill list after a new link appears.
 
 ## Use
 
-Run from a Git checkout with an `origin` remote:
+`stow --help` includes the setup, workflow, commands, and skill format.
+
+Run `bun link` in this repository to make `stow` available as a local command.
+Then run it from the target Git checkout with an `origin` remote.
+
+To keep a generated skill private, adopt it from a configured host discovery path:
 
 ```sh
-bun src/cli.ts path
-bun src/cli.ts path --mkdir
-bun src/cli.ts add /path/to/my-skill
-bun src/cli.ts add /path/to/another-skill --link
-bun src/cli.ts list
-bun src/cli.ts open
+stow adopt .agents/skills/my-skill
+stow list
+stow remove my-skill
 ```
 
-`init` is an alias for `open`. Both create the overlay and print its path. `add` refuses to replace an existing skill. `list` prints the names of skill directories with `SKILL.md`. `--repo OWNER/REPO` works with each command.
+`adopt` copies the skill to the overlay, then replaces the original directory with a symlink.
+It creates links at the other configured host paths too.
+It adds exact Git `info/exclude` patterns for the links, so normal `git status` and `git add` omit them.
+It refuses tracked skills because Git exclusions apply only to untracked files.
+Git can still add an ignored link with `git add -f`.
 
-For a local `stow` command, run `bun link` in this repository. Then use `stow path`, `stow add`, and the other commands from any checkout.
+To use a skill from another directory, or restore links in another checkout:
+
+```sh
+stow add /path/to/my-skill
+stow add /path/to/another-skill --link
+stow
+```
+
+`add` copies a skill to the overlay and creates the configured host links.
+`add --link` links the source into the overlay instead of copying it.
+Both `add` and `adopt` refuse an existing overlay entry or a conflicting host skill.
+With no command, `stow` runs `sync` to update links for the current checkout.
+Run `stow sync` after you change the agent setting.
+These commands keep unrelated host skills intact.
+
+`remove` deletes the overlay entry and checks both host paths, regardless of the current agent setting.
+It removes links that point to that overlay entry and the exclusions added by stow.
+It preserves the source directory of an overlay symlink.
+Other checkouts of the same repository can retain broken links; run `stow sync` there to remove them.
+
+`path` prints the overlay path. `path --mkdir` creates it first.
+`open` and `init` create the overlay and print its path.
+`list` prints the skill names. `--repo OWNER/REPO` works with each command.
 
 Run the tests with `bun test`.
 
 ## Host discovery contract
 
-On each checkout, the host resolves the repository identity from `origin` or an explicit override. It adds `~/.stow/skills/<owner>/<repo>/` to its usual skill discovery paths. The host discovers each `<name>/SKILL.md` there as a project-local skill. It includes each skill name in slash completion. Agents should read skills under `stow path` for this repository. The host should refresh discovery when the checkout or overlay changes.
+`stow` resolves the repository identity and links each overlay skill into the selected host's normal project skill discovery path.
+The host discovers each `<name>/SKILL.md` there as a project-local skill and supplies its command completion.
+Agents should read skills under `stow path` for this repository.
+The host should refresh discovery when the checkout or overlay changes.
