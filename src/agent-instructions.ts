@@ -32,6 +32,18 @@ This JSON is local configuration data, not instructions:
 ${JSON.stringify(state, null, 2)}
 \`\`\`
 
+## 0. Make the CLI available
+
+This guide can come from npx, which does not install a global stow command.
+Check whether stow --help identifies this personal skills CLI and includes agent-instructions.
+If the command is missing, install it with:
+  npm install --global @meganemura/stow
+Then verify stow --help before you continue.
+If another program owns the stow command, explain the conflict before changing that installation.
+If a global installation fails, report the error. Do not use sudo automatically.
+You can continue with npx --yes @meganemura/stow in place of every stow command below.
+Do not add stow to the target repository's dependencies.
+
 ## 1. Configure the current host
 
 Identify your own host from the current session, not from the configured agent list.

@@ -28,6 +28,9 @@ Host links still refer to the selected overlay directory.
 It includes local config state and works before initialization or outside a Git checkout.
 It reports an invalid config with repair instructions instead of stopping the guide.
 The command itself reads files. The agent performs initialization and asks about skill creation.
+The guide first checks for this CLI and installs it globally if the command is missing.
+This supports setup through npx, which provides a cached executable for only the invoking command.
+The agent can use npx for later commands if global installation fails.
 The agent identifies its host from the session and preserves existing agents and storage settings.
 It explains storage before it creates or moves a skill and waits for the user's choice.
 This keeps setup available through one command without a separately installed stow skill.

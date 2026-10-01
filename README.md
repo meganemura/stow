@@ -33,8 +33,11 @@ In a host with shell shortcuts, run:
 You can also run it without a global install:
 
 ```text
-!npx @meganemura/stow agent-instructions
+!npx --yes @meganemura/stow agent-instructions
 ```
+
+The instructions tell the agent to check the CLI and install it globally if it is missing.
+If installation fails, the agent can continue through npx.
 
 If you have Bun, use `bunx --bun @meganemura/stow agent-instructions` to run the same package with Bun.
 The default `stow` and `npx` commands use Node. Bun performance gains depend on the workload.
