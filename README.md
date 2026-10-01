@@ -122,8 +122,8 @@ The `alice/weather-app` directory link selects the skills repository for that Gi
 
 | Agent | Discovery path in the checkout | Invocation |
 | --- | --- | --- |
-| Codex | `.agents/skills/<name>` | `$name` or `/skills` |
 | Claude Code | `.claude/skills/<name>` | `/name` |
+| Codex | `.agents/skills/<name>` | `$name` or `/skills` |
 | Cursor | `.agents/skills/<name>` | `/name` |
 | Antigravity | `.agents/skills/<name>` | `/name` |
 | pi | `.agents/skills/<name>` | `/skill:name` |
