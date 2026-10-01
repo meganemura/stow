@@ -1,15 +1,27 @@
-// Read the user's agents and skill storage path.
+// Define host skill paths and read the user's agents and skill storage path.
 // Git operations belong to the CLI and host link reconciler.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-export type Agent = "claude-code" | "codex" | "cursor";
-const agentNames: Agent[] = ["claude-code", "codex", "cursor"];
+// The first path is the output path; other paths are accepted adoption sources.
+export const agentPaths = {
+  "claude-code": [".claude/skills"],
+  codex: [".agents/skills"],
+  cursor: [".agents/skills", ".cursor/skills", ".claude/skills"],
+  antigravity: [".agents/skills", ".agent/skills"],
+  pi: [".agents/skills", ".pi/skills"],
+  "gemini-cli": [".agents/skills", ".gemini/skills"],
+  "github-copilot": [".agents/skills", ".github/skills", ".claude/skills"],
+  opencode: [".agents/skills", ".opencode/skills", ".claude/skills"],
+  "devin-desktop": [".agents/skills", ".devin/skills", ".windsurf/skills"],
+} as const;
+export type Agent = keyof typeof agentPaths;
+export const agentNames = Object.keys(agentPaths) as Agent[];
 
 function validateAgents(agents: unknown, configPath: string): Agent[] {
   if (!Array.isArray(agents) || agents.some((agent) => !agentNames.includes(agent))) {
-    throw new Error(`${configPath} must contain an agents array of claude-code, codex, or cursor.`);
+    throw new Error(`${configPath} must contain an agents array. Supported agents: ${agentNames.join(", ")}.`);
   }
   return [...new Set(agents)] as Agent[];
 }

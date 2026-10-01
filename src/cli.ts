@@ -17,8 +17,8 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { initConfig, loadConfig } from "./config.ts";
-import { assertHostLinksAvailable, checkoutRoot, removeHostLinks, requiredHostDirs, syncHostLinks } from "./hosts.ts";
+import { agentNames, agentPaths, initConfig, loadConfig } from "./config.ts";
+import { adoptionHostDirs, assertHostLinksAvailable, checkoutRoot, removeHostLinks, syncHostLinks } from "./hosts.ts";
 
 const help = `stow — personal skills for the current Git checkout
 
@@ -40,7 +40,7 @@ First setup:
   init preserves an existing config. It does not create skill directories.
   Within skillsDir, use <owner>/<repo>/<name>/SKILL.md.
   skillsDir accepts absolute paths, ~/ paths, and paths relative to ~/.stow.
-  Codex and Cursor use .agents/skills; Claude Code uses .claude/skills.
+  Claude Code uses .claude/skills; all other supported agents use .agents/skills.
   Without this file, stow stores skills but creates no host links.
   To install this Bun CLI locally, run bun link in the stow checkout.
   The package is @meganemura/stow; the command is stow. Bun is required.
@@ -58,11 +58,13 @@ Typical workflow:
   2. Run: stow adopt .agents/skills/my-skill
      For Claude Code: stow adopt .claude/skills/my-skill
   3. Invoke it with $my-skill in Codex, or /my-skill in Claude Code or Cursor.
+     pi uses /skill:my-skill. Devin Desktop uses @my-skill.
+     In Gemini CLI or OpenCode, ask the agent to use my-skill.
      A running host may need to refresh its skill list.
 
 Commands:
   adopt <skill-dir> Move an untracked host skill to the private overlay.
-                    Replace its directory with a link and add other host links.
+                    Move it to the selected discovery path as a link.
                     The source must be in a configured host discovery path.
                     Tracked skills and source symlinks are rejected.
   add <source-dir>   Copy an external skill into the overlay and create host links.
@@ -70,7 +72,7 @@ Commands:
   sync              Update this checkout's links for the configured agents.
                     Use after changing config or opening another checkout.
                     Remove obsolete links that point into this overlay.
-  remove <name>     Delete the overlay skill and its links from both host paths.
+  remove <name>     Delete the overlay skill and its links from all known host paths.
                     Ignore the agent setting during cleanup.
                     Preserve the original source of an overlay symlink.
   list              Print skill names in this checkout's overlay.
@@ -85,8 +87,13 @@ Options:
   --link            Link the source with add only.
   --skills-dir PATH Set the skill storage directory with init only.
   --agents LIST     Set agents with init only, separated by commas.
-                    Values: codex, claude-code, cursor. Default: no agents.
+                    Values: ${agentNames.join(", ")}.
+                    Default: no agents.
   -h, --help        Show this help, also after a command.
+
+Accepted project paths for adopt (first path receives links):
+${agentNames.map((agent) => `  ${agent}: ${agentPaths[agent].join(", ")}`).join("\n")}
+  Native paths migrate to the selected output paths; the old directory is removed.
 
 Skill format:
   The directory name uses lowercase letters, digits, and hyphens.
@@ -291,17 +298,13 @@ function run(args: string[]): void {
     if (agents.length && !root) throw new Error("add requires a Git checkout when agents are configured.");
     const adopting = options.command === "adopt";
     if (adopting) {
-      if (!root || !requiredHostDirs(agents).some((hostDir) => source === join(root, hostDir, name))) {
+      if (!root || !adoptionHostDirs(agents).some((hostDir) => source === join(root, hostDir, name))) {
         throw new Error("adopt requires a skill in a configured checkout host path. Set agents in ~/.stow/config.json.");
       }
       if (lstatSync(source).isSymbolicLink()) throw new Error("adopt requires a real skill directory, not a symlink.");
       const tracked = execFileSync("git", ["-C", root, "ls-files", "--", source], { encoding: "utf8" });
       if (tracked) throw new Error("Cannot adopt a tracked skill. Git exclusions apply only to untracked files.");
-      assertHostLinksAvailable(root, dir, skillNames(dir), agents);
-      for (const hostDir of requiredHostDirs(agents)) {
-        const other = join(root, hostDir, name);
-        if (other !== source) assertHostLinksAvailable(root, dir, [name], hostDir === ".claude/skills" ? ["claude-code"] : ["codex"]);
-      }
+      assertHostLinksAvailable(root, dir, [...skillNames(dir), name], agents, source);
     } else if (root) {
       assertHostLinksAvailable(root, dir, [...skillNames(dir), name], agents);
     }

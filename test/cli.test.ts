@@ -1,7 +1,7 @@
 // Exercise the public CLI against a temporary checkout and home directory.
 // This keeps tests independent of the user's private overlays.
 
-import { expect, test } from "bun:test";
+import { expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync, execFileSync } from "node:child_process";
 import {
   existsSync,
@@ -18,6 +18,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
 const cli = resolve(import.meta.dir, "../src/cli.ts");
+// Each case starts several Git and Bun processes, which can exceed five seconds on a busy machine.
+setDefaultTimeout(30_000);
 
 function writeSkill(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -228,6 +230,47 @@ for (const storageMode of ["absolute", "home", "relative", "symlink"] as const) 
       expect(run("remove", "generated").status).toBe(0);
       expect(existsSync(join(skillsRoot, "alice", "project", "generated"))).toBe(false);
       expect(existsSync(join(skillsRoot, "alice", "project", "existing", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
+for (const [agent, nativePath] of [
+  ["antigravity", ".agent/skills"],
+  ["pi", ".pi/skills"],
+  ["gemini-cli", ".gemini/skills"],
+  ["github-copilot", ".github/skills"],
+  ["opencode", ".opencode/skills"],
+  ["devin-desktop", ".windsurf/skills"],
+] as const) {
+  test(`${agent} adopts native skills into the shared path and cleans links after a config change`, () => {
+    const root = mkdtempSync(join(tmpdir(), "stow-test-"));
+    try {
+      const checkout = join(root, "checkout");
+      const home = join(root, "home");
+      execFileSync("git", ["init", "-q", checkout]);
+      execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/project.git"]);
+      const run = (...args: string[]) => spawnSync(process.execPath, [cli, ...args], {
+        cwd: checkout, env: { ...process.env, HOME: home }, encoding: "utf8",
+      });
+      expect(run("init", "--agents", agent).status).toBe(0);
+      const source = join(checkout, nativePath, "generated");
+      writeSkill(source);
+      const content = readFileSync(join(source, "SKILL.md"), "utf8");
+      expect(run("adopt", join(nativePath, "generated")).status).toBe(0);
+      const overlay = join(home, ".stow", "skills", "alice", "project", "generated");
+      const shared = join(checkout, ".agents", "skills", "generated");
+      expect(readlinkSync(shared)).toBe(overlay);
+      expect(readFileSync(join(shared, "SKILL.md"), "utf8")).toBe(content);
+      expect(existsSync(source)).toBe(false);
+      expect(run().status).toBe(0);
+      expect(execFileSync("git", ["-C", checkout, "status", "--porcelain"], { encoding: "utf8" })).toBe("");
+      symlinkSync(overlay, source, "dir");
+      writeFileSync(join(home, ".stow", "config.json"), JSON.stringify({ agents: [] }));
+      expect(run("remove", "generated").status).toBe(0);
+      expect(existsSync(shared)).toBe(false);
+      expect(() => lstatSync(source)).toThrow();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

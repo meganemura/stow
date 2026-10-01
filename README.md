@@ -6,7 +6,7 @@ Each target repository gets its own `<owner>/<repo>/` directory there.
 `stow` reads this identity from the target's GitHub-style `origin` URL.
 Use `--repo OWNER/REPO` when the remote is missing or has a different identity.
 
-This Bun TypeScript CLI connects personal skills to Claude Code, Codex, and Cursor through their project skill discovery paths.
+This Bun TypeScript CLI connects personal skills to coding agents through their project skill discovery paths.
 Each skill must have a `<name>/SKILL.md` file. The file must declare a matching `name` and a `description` in YAML frontmatter.
 A skill may also contain `references/`.
 
@@ -95,8 +95,19 @@ The `alice/project` directory link selects that target's skills repository.
 | Codex | `.agents/skills/<name>` | `$name` or `/skills` |
 | Claude Code | `.claude/skills/<name>` | `/name` |
 | Cursor | `.agents/skills/<name>` | `/name` |
+| Antigravity | `.agents/skills/<name>` | `/name` |
+| pi | `.agents/skills/<name>` | `/skill:name` |
+| Gemini CLI | `.agents/skills/<name>` | Ask for the skill; `/skills list` shows skills |
+| GitHub Copilot | `.agents/skills/<name>` | `/name` |
+| OpenCode | `.agents/skills/<name>` | Ask the agent to use the skill |
+| Devin Desktop | `.agents/skills/<name>` | `@name` |
 
-Codex and Cursor share one discovery path.
+All supported hosts except Claude Code share `.agents/skills`.
+Use these config identifiers: `claude-code`, `codex`, `cursor`, `antigravity`, `pi`, `gemini-cli`, `github-copilot`, `opencode`, `devin-desktop`.
+For example, `stow init --agents antigravity,pi` selects both hosts and creates one link per skill in the shared directory.
+See [the host research](https://github.com/meganemura/stow/blob/main/docs/additional-hosts.md) for official sources, native paths, refresh commands, and symlink evidence.
+The CLI tests verify links and Git exclusions. They do not verify each host's UI or skill activation.
+The Devin Desktop mapping uses current documentation; older Windsurf clients can differ.
 Without the config file, `stow` stores skills but creates no host links.
 The host must scan a linked skill before it appears in its command menu.
 An open host session may need to refresh its skill list after a new link appears.
@@ -117,6 +128,9 @@ stow remove my-skill
 ```
 
 `adopt` copies the skill to the overlay, then replaces the original directory with a symlink.
+For a native or legacy discovery path, it moves the skill to the selected shared discovery path instead.
+For example, `stow adopt .pi/skills/my-skill` creates `.agents/skills/my-skill` and removes the original directory.
+It accepts native paths only for configured hosts. `stow --help` lists these paths.
 With `skillsDir`, the copied files go directly into your skills repository checkout.
 It creates links at the other configured host paths too.
 It adds exact Git `info/exclude` patterns for the links, so normal `git status` and `git add` omit them.
@@ -143,7 +157,7 @@ Commit and push skill changes from the skills repository with your usual Git wor
 `stow` changes files locally. It does not clone, commit, pull, or push that repository.
 After you pull new skills on another machine, run `stow` in the target checkout to create its host links.
 
-`remove` deletes the overlay entry and checks both host paths, regardless of the current agent setting.
+`remove` deletes the overlay entry and checks all known host paths, regardless of the current agent setting.
 When the overlay is a Git checkout, the deletion appears in that skills repository's Git status.
 It removes links that point to that overlay entry and the exclusions added by stow.
 It preserves the source directory of an overlay symlink.

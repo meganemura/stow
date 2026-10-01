@@ -14,9 +14,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import type { Agent } from "./config.ts";
+import { agentPaths, type Agent } from "./config.ts";
 
-const hostDirs = [".agents/skills", ".claude/skills"] as const;
+const hostDirs = [...new Set(Object.values(agentPaths).flat())];
 
 export function checkoutRoot(): string | undefined {
   try {
@@ -30,10 +30,11 @@ export function checkoutRoot(): string | undefined {
 }
 
 export function requiredHostDirs(agents: Agent[]): string[] {
-  const dirs: string[] = [];
-  if (agents.includes("codex") || agents.includes("cursor")) dirs.push(".agents/skills");
-  if (agents.includes("claude-code")) dirs.push(".claude/skills");
-  return dirs;
+  return [...new Set(agents.map((agent) => agentPaths[agent][0]))];
+}
+
+export function adoptionHostDirs(agents: Agent[]): string[] {
+  return [...new Set(agents.flatMap((agent) => [...agentPaths[agent]]))];
 }
 
 function linkTarget(path: string): string | undefined {
@@ -98,10 +99,11 @@ function wantedLinks(root: string, overlay: string, names: string[], agents: Age
   return wanted;
 }
 
-export function assertHostLinksAvailable(root: string, overlay: string, names: string[], agents: Agent[]): void {
+export function assertHostLinksAvailable(root: string, overlay: string, names: string[], agents: Agent[], sourceToReplace?: string): void {
   const wanted = wantedLinks(root, overlay, names, agents);
   // Reject collisions before changing any host directory.
   for (const [path, target] of wanted) {
+    if (path === sourceToReplace) continue;
     const tracked = execFileSync("git", ["-C", root, "ls-files", "--", path], { encoding: "utf8" });
     if (tracked) throw new Error(`Host skill path is tracked by Git: ${path}`);
     try {

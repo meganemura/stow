@@ -25,15 +25,18 @@ Host links still refer to the selected overlay directory.
 ## Host links
 
 The `agents` array in `~/.stow/config.json` selects host discovery paths.
-Codex and Cursor use `.agents/skills`; Claude Code uses `.claude/skills`.
+All supported hosts except Claude Code use `.agents/skills`; Claude Code uses `.claude/skills`.
+The host catalog also lists native or legacy paths that `adopt` accepts for each configured host.
+Skills adopted from those paths move to the shared output path, and the original directory is removed.
+This uses each host's shared discovery support and avoids duplicate links.
 `stow` creates one symlink per skill in each selected path and adds exact Git `info/exclude` patterns.
 The host owns skill discovery and command completion.
 
 `adopt` handles a skill that an agent created in the checkout.
-It copies the skill to the overlay before replacing the original directory with a link.
+It copies the skill to the overlay before removing the source and creating output links.
 It refuses tracked skills because local Git exclusions affect untracked files.
 
 `sync` reconciles the current checkout with the agent setting.
 It removes links that point directly to a skill in the selected overlay when those links are no longer required.
-`remove` checks both host paths even when the setting selects one or neither.
+`remove` checks all known host paths, including native and legacy paths, regardless of the setting.
 Both operations preserve unrelated host skills.
