@@ -8,6 +8,7 @@
   "scripts": {
     "start": "bun src/cli.ts",
     "test": "bun test",
+    "test:scenarios": "nuka check && nuka run features",
     "build": "bun build ./src/cli.ts --target=node --outfile=./dist/cli.js",
     "prepack": "bun run build"
   },
@@ -24,5 +25,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "nukadoko": "0.14.0"
   }
 }

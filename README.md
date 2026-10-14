@@ -147,6 +147,7 @@ An open host session may need to refresh its skill list after a new link appears
 `stow --help` includes the setup, workflow, commands, and skill format.
 
 For development, run `bun run build` and `bun link` in this repository to make `stow` available as a local command.
+`bun test` runs the CLI tests. `bun run test:scenarios` runs the adopt-and-remove workflow in `features/` as a nukadoko scenario against the built `dist/cli.js`.
 Then run it from the target Git checkout with an `origin` remote.
 
 To keep a generated skill private, adopt it from a configured host discovery path:
