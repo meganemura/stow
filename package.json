@@ -9,6 +9,7 @@
     "start": "bun src/cli.ts",
     "test": "bun test",
     "test:scenarios": "nuka check && nuka run features",
+    "archstrict": "archstrict check",
     "build": "bun build ./src/cli.ts --target=node --outfile=./dist/cli.js",
     "prepack": "bun run build"
   },
@@ -27,6 +28,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "archstrict": "0.2.1",
     "nukadoko": "0.14.0"
   }
 }

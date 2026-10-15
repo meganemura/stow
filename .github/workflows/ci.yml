@@ -1,4 +1,4 @@
-# Runs the tests and the nukadoko scenario on every push to main and queue,
+# Runs the tests, the module-boundary check, and the nukadoko scenario on every push to main and queue,
 # and on pull requests.
 name: CI
 
@@ -26,6 +26,7 @@ jobs:
           node "$(npm root --global)/bun/install.js"
       - run: bun install --frozen-lockfile
       - run: bun test
+      - run: bun run archstrict
       - run: bun run build
       - name: Run the nukadoko scenario against the distributed Node CLI
         run: bun run test:scenarios
