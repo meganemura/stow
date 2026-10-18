@@ -1,6 +1,7 @@
-import { defineStep, z } from "nukadoko";
-import { execFileSync } from "node:child_process";
+import { defineStep, runCommand, z } from "nukadoko";
 
+// stow picks the overlay from the origin URL, so the checkout needs a
+// GitHub-style remote. Nothing is fetched from it.
 export default defineStep({
   description: "Creates a scratch git checkout whose origin is git@github.com:alice/weather-app.git.",
   pattern: "a target checkout whose origin is a GitHub repository",
@@ -10,11 +11,12 @@ export default defineStep({
     repository: z.string().describe("the owner/repo stow reads from origin"),
   }),
   mutates: true,
-  rationale: "stow picks the overlay from the origin URL, so the checkout needs a GitHub-style remote. Nothing is fetched from it.",
-  run({ scratch }) {
+  async run({ scratch }) {
     const checkout = scratch.dir("stow-scenario-checkout");
-    execFileSync("git", ["init", "--quiet", checkout]);
-    execFileSync("git", ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/weather-app.git"]);
+    for (const args of [["init", "--quiet", checkout], ["-C", checkout, "remote", "add", "origin", "git@github.com:alice/weather-app.git"]]) {
+      const { exitCode, stderr } = await runCommand("git", args);
+      if (exitCode !== 0) throw new Error(`git ${args.join(" ")} exited ${exitCode}: ${stderr}`);
+    }
     return { checkout, repository: "alice/weather-app" };
   },
 });

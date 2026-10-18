@@ -6,6 +6,8 @@ import configureStow from "./configure-stow.ts";
 import createTargetCheckout from "./create-target-checkout.ts";
 import writeGeneratedSkill from "./write-generated-skill.ts";
 
+// lstat, not stat: the overlay copy must be a real directory, or the skill
+// would still live in the checkout behind a link.
 export default defineStep({
   description: "Asserts adopt exited 0 and every file of the skill is a real file in <skillsDir>/<owner>/<repo>/<name> with its content.",
   pattern: "the skill's files live in the overlay for that repository",
@@ -27,7 +29,6 @@ export default defineStep({
     files: [writeGeneratedSkill, "files"],
   },
   mutates: false,
-  rationale: "lstat, not stat: the overlay copy must be a real directory, or the skill would still live in the checkout behind a link.",
   run({}, { exitCode, stderr, skillsDir, repository, name, files }) {
     if (exitCode !== 0) throw new Error(`stow adopt exited ${exitCode}: ${stderr}`);
     const overlaySkill = join(skillsDir, repository, name);

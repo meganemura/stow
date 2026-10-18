@@ -3,6 +3,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import createTargetCheckout from "./create-target-checkout.ts";
 
+// A reference file beside SKILL.md shows the whole directory moves, not only
+// the one file stow validates.
 export default defineStep({
   description: "Writes a skill named release-notes under the checkout's .agents/skills, with a SKILL.md and a reference file.",
   pattern: "the agent wrote a skill under the target's shared skill directory",
@@ -14,7 +16,6 @@ export default defineStep({
   }),
   from: { checkout: [createTargetCheckout, "checkout"] },
   mutates: true,
-  rationale: "A reference file beside SKILL.md shows the whole directory moves, not only the one file stow validates.",
   run({}, { checkout }) {
     const name = "release-notes";
     const path = `.agents/skills/${name}`;
