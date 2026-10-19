@@ -29,6 +29,6 @@
   },
   "devDependencies": {
     "archstrict": "0.2.1",
-    "nukadoko": "0.17.0"
+    "nukadoko": "0.18.0"
   }
 }
