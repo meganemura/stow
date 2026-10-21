@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-21
+
 ### Changed
 
 - A version bump in `package.json` that lands on `main` now publishes the package. The publish workflow creates the `v<version>` tag and the GitHub release after `npm publish` succeeds. See `docs/releasing.md`.
