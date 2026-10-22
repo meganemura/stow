@@ -39,7 +39,7 @@ This keeps setup available through one command without a separately installed st
 
 Development and tests use Bun. Bun builds one JavaScript file for Node before package creation.
 The npm binary points to that file and uses a Node shebang.
-This lets Node.js 20+ users run stow with npm or npx without installing Bun.
+This lets users on Node.js `^22.23.4`, `^24.22.1`, or `>=26.12.1` run stow with npm or npx without installing Bun.
 Users can run the same package with Bun through `bunx --bun`.
 The implementation uses Node standard modules so both runtimes share the same CLI behavior.
 Runtime performance is not guaranteed; Git subprocesses and filesystem work also affect command time.

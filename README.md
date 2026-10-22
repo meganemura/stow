@@ -15,7 +15,7 @@ The overlay belongs to the user and stays in the separate skills checkout.
 
 ## Set up a personal skills repository
 
-Install Node.js 20 or later, then install the CLI:
+Install Node.js `^22.23.4`, `^24.22.1`, or `>=26.12.1`, then install the CLI:
 
 ```sh
 npm install --global @meganemura/stow

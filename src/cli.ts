@@ -45,7 +45,7 @@ First setup:
   Without this file, stow stores skills but creates no host links.
   Install: npm install --global @meganemura/stow
   Or run without a global install: npx @meganemura/stow agent-instructions
-  Node.js 20+ is required for npm/npx use.
+  Node.js ^22.23.4, ^24.22.1, or >=26.12.1 is required for npm/npx use.
   With Bun: bunx --bun @meganemura/stow agent-instructions
   Development uses Bun. To link this checkout: bun run build, then bun link.
   The package is @meganemura/stow; the command is stow.

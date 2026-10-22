@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Breaking change. `engines.node` is `^22.23.4 || ^24.22.1 || >=26.12.1`. Node.js 20, 23, and 25 are outside that range, and so are earlier releases on the 22, 24, and 26 lines. The minimums are the releases that fix CVE-2026-111497 and CVE-2026-106069.
+
 ## [0.1.2] - 2026-10-21
 
 ### Changed
