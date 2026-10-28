@@ -39,6 +39,7 @@ export default {
     // Each other top-level directory that holds TypeScript source, and each top-level TypeScript source file.
     { name: "features", glob: "features/**" },
     { name: "nukadoko.config.ts", glob: "nukadoko.config.ts", surface: "nukadoko.config.ts" },
+    { name: "nukadoko.program.ts", glob: "nukadoko.program.ts", surface: "nukadoko.program.ts" },
   ],
   // The layers, bottom to top. A file may import its own layer or a lower
   // one, never a higher one.
